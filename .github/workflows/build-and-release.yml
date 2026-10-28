@@ -1,0 +1,161 @@
+name: Build, test and package
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clipboard-peek-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: ${{ matrix.rid }} checks and executable
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            rid: win-x64
+          - os: ubuntu-24.04
+            rid: linux-x64
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build and run core tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet --info
+          if ($LASTEXITCODE -ne 0) { throw 'dotnet info failed' }
+          dotnet run -c Release --project tests/ClipboardPeek.Core.Tests/ClipboardPeek.Core.Tests.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Core tests failed' }
+          dotnet build src/ClipboardPeek/ClipboardPeek.csproj -c Release --warnaserror
+          if ($LASTEXITCODE -ne 0) { throw 'Application build failed' }
+
+      - name: Audit dependency vulnerabilities
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet list src/ClipboardPeek/ClipboardPeek.csproj package --vulnerable --include-transitive
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency audit failed' }
+
+      - name: Produce self contained executable
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet publish src/ClipboardPeek/ClipboardPeek.csproj -c Release -r '${{ matrix.rid }}' --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -p:DebugSymbols=false -o artifacts/publish
+          if ($LASTEXITCODE -ne 0) { throw 'Native publish failed' }
+
+      - name: Linux virtual display smoke test
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x artifacts/publish/ClipboardPeek
+          set +e
+          xvfb-run -a timeout 8s artifacts/publish/ClipboardPeek > "$RUNNER_TEMP/clipboardpeek-smoke.log" 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 124 ]; then
+            echo "GUI process exited early. Status: $status"
+            exit 1
+          fi
+          echo "Virtual-display executable remained running through smoke interval."
+
+      - name: Validate Windows PE executable
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $exe = 'artifacts/publish/ClipboardPeek.exe'
+          if (-not (Test-Path $exe)) { throw 'Windows executable missing' }
+          $stream = [System.IO.File]::OpenRead((Resolve-Path $exe).Path)
+          try {
+            if ($stream.ReadByte() -ne 0x4d -or $stream.ReadByte() -ne 0x5a) { throw 'Invalid Windows executable header' }
+          }
+          finally { $stream.Dispose() }
+          Write-Host 'Windows PE header and file presence verified. Human GUI QA is separate.'
+
+      - name: Assemble archives and SHA256 digests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $rid = '${{ matrix.rid }}'
+          $publish = Join-Path $env:GITHUB_WORKSPACE 'artifacts/publish'
+          $dist = Join-Path $env:GITHUB_WORKSPACE 'dist'
+          New-Item -ItemType Directory -Path $dist -Force | Out-Null
+          Copy-Item LICENSE -Destination $publish
+          Copy-Item THIRD_PARTY_NOTICES.md -Destination $publish
+          if ($rid -eq 'win-x64') {
+            $name = "ClipboardPeek-$rid.zip"
+            Compress-Archive -Path (Join-Path $publish '*') -DestinationPath (Join-Path $dist $name) -Force
+          }
+          else {
+            $name = "ClipboardPeek-$rid.tar.gz"
+            & tar -czf (Join-Path $dist $name) -C $publish .
+            if ($LASTEXITCODE -ne 0) { throw 'Linux archive creation failed' }
+          }
+          $hash = (Get-FileHash -Algorithm SHA256 -Path (Join-Path $dist $name)).Hash.ToLowerInvariant()
+          Set-Content -Encoding ascii -NoNewline -Path (Join-Path $dist "$name.sha256") -Value "$hash  $name`n"
+          Write-Host "Packaged $name with SHA256 digest."
+
+      - name: Upload verified build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: clipboardpeek-${{ matrix.rid }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish versioned GitHub release
+    needs: [package]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Collect packages from both passing runners
+        uses: actions/download-artifact@v4
+        with:
+          pattern: clipboardpeek-*
+          path: release-files
+          merge-multiple: true
+
+      - name: Verify archive digests
+        shell: bash
+        working-directory: release-files
+        run: |
+          set -euo pipefail
+          test -s ClipboardPeek-win-x64.zip
+          test -s ClipboardPeek-linux-x64.tar.gz
+          sha256sum --check ClipboardPeek-win-x64.zip.sha256
+          sha256sum --check ClipboardPeek-linux-x64.tar.gz.sha256
+
+      - name: Publish downloadable archives
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" release-files/ClipboardPeek-win-x64.zip release-files/ClipboardPeek-linux-x64.tar.gz release-files/ClipboardPeek-win-x64.zip.sha256 release-files/ClipboardPeek-linux-x64.tar.gz.sha256 --repo "$GH_REPO" --verify-tag --generate-notes
