@@ -14,6 +14,17 @@ public sealed class ClipboardChangeGate
     private ulong? _lastSequence;
     public bool IsPrimed { get; private set; }
 
+    /// <summary>
+    /// Allows Windows to establish the startup clipboard identity immediately,
+    /// before its first asynchronous text read completes.
+    /// </summary>
+    public void PrimeSequence(ulong sequence)
+    {
+        Reset();
+        _lastSequence = sequence;
+        IsPrimed = true;
+    }
+
     public bool Observe(string? text, ulong? sequence)
     {
         byte[] digest = SHA256.HashData(
