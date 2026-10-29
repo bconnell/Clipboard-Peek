@@ -14,6 +14,10 @@ public sealed class ClipboardChangeGate
     private ulong? _lastSequence;
     public bool IsPrimed { get; private set; }
 
+    public bool HasUnchangedNativeSequence(ulong? sequence) =>
+        IsPrimed && _lastSequence.HasValue && sequence.HasValue &&
+        _lastSequence.Value == sequence.Value;
+
     /// <summary>
     /// Allows Windows to establish the startup clipboard identity immediately,
     /// before its first asynchronous text read completes.
