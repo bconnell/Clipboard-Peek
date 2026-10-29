@@ -213,7 +213,7 @@ public sealed class OverlayWindow : Window
         Grid.SetRow(_textBox, 1);
         panelContents.Children.Add(_textBox);
         Grid.SetRow(footer, 2);
-        footer.Children.Add(rightFooter);
+        panelContents.Children.Add(footer);
 
         _surface = new Border
         {
