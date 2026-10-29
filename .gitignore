@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+.vs/
+.idea/
+*.user
+*.suo
+*.log
+artifacts/
+dist/
+TestResults/
+*.pdb
+.DS_Store
+.packages/
