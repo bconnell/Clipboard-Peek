@@ -383,6 +383,12 @@ public sealed class OverlayWindow : Window
         }
 
         ulong? sequenceBefore = WindowsClipboardSequence.Read();
+        if (_changeGate.HasUnchangedNativeSequence(sequenceBefore))
+        {
+            // On Windows an unchanged clipboard token avoids fetching large content.
+            return;
+        }
+
         string? copiedText = await clipboard.TryGetTextAsync();
         ulong? sequenceAfter = WindowsClipboardSequence.Read();
         if (_closed || _preview.IsFrozen)
