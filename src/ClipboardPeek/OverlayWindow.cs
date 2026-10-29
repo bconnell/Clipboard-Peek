@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -15,6 +16,7 @@ namespace ClipboardPeek;
 public sealed class OverlayWindow : Window
 {
     private readonly PreviewState _preview = new();
+    private readonly ClipboardChangeGate _changeGate = new();
     private readonly DispatcherTimer _clipboardTimer;
     private readonly Border _surface;
     private readonly TextBox _textBox;
@@ -25,10 +27,18 @@ public sealed class OverlayWindow : Window
     private readonly Button _pinButton;
 
     private bool _readingClipboard;
+    private bool _openedOnce;
     private bool _closed;
+    private IClipboard? _monitorClipboard;
 
     public OverlayWindow()
     {
+        ulong? startupSequence = WindowsClipboardSequence.Read();
+        if (startupSequence.HasValue)
+        {
+            _changeGate.PrimeSequence(startupSequence.Value);
+        }
+
         Title = "Clipboard Peek";
         Width = 440;
         Height = 250;
@@ -36,7 +46,10 @@ public sealed class OverlayWindow : Window
         MinHeight = 170;
         CanResize = true;
         Topmost = true;
-        ShowInTaskbar = true;
+        // The window is initially invisible; a tray menu makes the process recoverable.
+        ShowInTaskbar = false;
+        ShowActivated = false;
+        Opacity = 0;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         WindowDecorations = WindowDecorations.None;
         TransparencyLevelHint = [WindowTransparencyLevel.Transparent];
@@ -97,30 +110,12 @@ public sealed class OverlayWindow : Window
         {
             _preview.Clear();
             RenderState();
+            DismissPreview();
         };
 
         Button closeButton = MakeButton("×");
-        closeButton.Click += (_, _) => Close();
-
-        Border resizeGrip = new()
-        {
-            Background = Brushes.Transparent,
-            Padding = new Thickness(7, 3),
-            Child = new TextBlock
-            {
-                Text = "↘",
-                Foreground = Brushes.White,
-                FontSize = 13
-            }
-        };
-        ToolTip.SetTip(resizeGrip, "Drag to resize");
-        resizeGrip.PointerPressed += (_, eventArgs) =>
-        {
-            if (eventArgs.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            {
-                BeginResizeDrag(WindowEdge.SouthEast, eventArgs);
-            }
-        };
+        ToolTip.SetTip(closeButton, "Dismiss preview. Clipboard Peek remains in the tray.");
+        closeButton.Click += (_, _) => DismissPreview();
 
         Slider opacitySlider = new()
         {
@@ -198,8 +193,7 @@ public sealed class OverlayWindow : Window
             {
                 _opacityLabel,
                 opacitySlider,
-                clearButton,
-                resizeGrip
+                clearButton
             }
         };
 
@@ -225,7 +219,25 @@ public sealed class OverlayWindow : Window
             Child = panelContents
         };
 
-        Content = _surface;
+        // The 3 by 3 overlay reserves 10 physical layout units for every edge and
+        // corner. The surface is drawn underneath, with each resize zone on top.
+        Grid resizeOverlay = new()
+        {
+            RowDefinitions = new RowDefinitions("10,*,10"),
+            ColumnDefinitions = new ColumnDefinitions("10,*,10")
+        };
+        Grid.SetRowSpan(_surface, 3);
+        Grid.SetColumnSpan(_surface, 3);
+        resizeOverlay.Children.Add(_surface);
+        AddResizeZone(resizeOverlay, 0, 0, WindowEdge.NorthWest, StandardCursorType.TopLeftCorner);
+        AddResizeZone(resizeOverlay, 0, 1, WindowEdge.North, StandardCursorType.SizeNorthSouth);
+        AddResizeZone(resizeOverlay, 0, 2, WindowEdge.NorthEast, StandardCursorType.TopRightCorner);
+        AddResizeZone(resizeOverlay, 1, 0, WindowEdge.West, StandardCursorType.SizeWestEast);
+        AddResizeZone(resizeOverlay, 1, 2, WindowEdge.East, StandardCursorType.SizeWestEast);
+        AddResizeZone(resizeOverlay, 2, 0, WindowEdge.SouthWest, StandardCursorType.BottomLeftCorner);
+        AddResizeZone(resizeOverlay, 2, 1, WindowEdge.South, StandardCursorType.SizeNorthSouth);
+        AddResizeZone(resizeOverlay, 2, 2, WindowEdge.SouthEast, StandardCursorType.BottomRightCorner);
+        Content = resizeOverlay;
         ApplySurfaceOpacity(opacitySlider.Value);
         RenderState();
 
@@ -236,6 +248,16 @@ public sealed class OverlayWindow : Window
         _clipboardTimer.Tick += OnClipboardTick;
         Opened += (_, _) =>
         {
+            if (_openedOnce)
+            {
+                return;
+            }
+
+            _openedOnce = true;
+            // Create the native window without showing even a startup frame.
+            _monitorClipboard = Clipboard;
+            Hide();
+            Opacity = 1;
             _clipboardTimer.Start();
             OnClipboardTick(this, EventArgs.Empty);
         };
@@ -244,7 +266,56 @@ public sealed class OverlayWindow : Window
             _closed = true;
             _clipboardTimer.Stop();
             _preview.DisposeContent();
+            _changeGate.Reset();
         };
+    }
+
+    private void AddResizeZone(Grid root, int row, int column, WindowEdge edge, StandardCursorType cursor)
+    {
+        Border target = new()
+        {
+            Background = Brushes.Transparent,
+            Cursor = new Cursor(cursor)
+        };
+        Grid.SetRow(target, row);
+        Grid.SetColumn(target, column);
+        target.PointerPressed += (_, args) =>
+        {
+            if (args.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            {
+                BeginResizeDrag(edge, args);
+                args.Handled = true;
+            }
+        };
+        root.Children.Add(target);
+    }
+
+    public void ShowPreview(bool activate = false)
+    {
+        if (_closed)
+        {
+            return;
+        }
+
+        ShowInTaskbar = true;
+        if (!IsVisible)
+        {
+            Show();
+        }
+
+        if (activate)
+        {
+            Activate();
+        }
+    }
+
+    private void DismissPreview()
+    {
+        if (!_closed)
+        {
+            Hide();
+            ShowInTaskbar = false;
+        }
     }
 
     private static Button MakeButton(string label) => new()
@@ -305,20 +376,55 @@ public sealed class OverlayWindow : Window
 
     private async Task ReadClipboardAsync()
     {
-        if (Clipboard is null)
+        IClipboard? clipboard = _monitorClipboard ?? Clipboard;
+        if (clipboard is null)
         {
             return;
         }
 
-        string? copiedText = await Clipboard.TryGetTextAsync();
+        ulong? sequenceBefore = WindowsClipboardSequence.Read();
+        if (_changeGate.HasUnchangedNativeSequence(sequenceBefore))
+        {
+            // On Windows an unchanged clipboard token avoids fetching large content.
+            return;
+        }
+
+        string? copiedText = await clipboard.TryGetTextAsync();
+        ulong? sequenceAfter = WindowsClipboardSequence.Read();
         if (_closed || _preview.IsFrozen)
         {
             return;
         }
 
-        if (_preview.Observe(copiedText))
+        // Do not take a baseline from a clipboard that changed during the read.
+        if (sequenceBefore.HasValue && sequenceAfter.HasValue &&
+            sequenceBefore.Value != sequenceAfter.Value)
         {
-            RenderState();
+            return;
         }
+
+        if (_changeGate.Observe(copiedText, sequenceAfter))
+        {
+            _preview.Observe(copiedText, force: true);
+            RenderState();
+            ShowPreview();
+        }
+    }
+}
+
+internal static partial class WindowsClipboardSequence
+{
+    [LibraryImport("user32.dll", EntryPoint = "GetClipboardSequenceNumber")]
+    private static partial uint GetClipboardSequenceNumber();
+
+    internal static ulong? Read()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return null;
+        }
+
+        uint sequence = GetClipboardSequenceNumber();
+        return sequence == 0 ? null : sequence;
     }
 }

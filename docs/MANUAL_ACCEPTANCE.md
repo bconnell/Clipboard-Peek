@@ -7,11 +7,15 @@ This checklist is **not evidence of a pass**. Every checkbox starts unverified. 
 - [ ] Release script exits zero on an unchanged clean checkout. Hash matches archive.
 - [ ] Archive extracts into a fresh ordinary user directory. No SDK or admin access required.
 - [ ] `ClipboardPeek.exe` starts with no file missing or runtime error; works after restart.
+- [ ] On startup no preview or blank window appears, even if old clipboard content exists; the system tray displays Show and Exit.
+- [ ] A fresh copy opens the viewer. Copying identical text again after dismissing also opens it on Windows.
+- [ ] Tray Show reopens a dismissed window; tray Exit stops the process and monitoring.
 - [ ] A 30% dark background tint lets background application content show through while preview text remains opaque.
 - [ ] Tint slider moves through 10%, 30%, 100%; background changes but text contrast remains usable.
 - [ ] Copy text from browser, text editor, file dialog and another ordinary app. Changes appear without pasting.
 - [ ] Switch between apps repeatedly. Preview remains topmost while pinned; unpin changes z-order.
-- [ ] Drag the top bar, resize from the lower right, close and relaunch without trapping the window offscreen.
+- [ ] Drag the top bar. Resize independently from top, bottom, left, right, upper left, upper right, lower left and lower right. Verify correct mouse cursors, no interference with buttons, and proper minimum dimensions.
+- [ ] Dismiss via ×, copy again to reopen, and verify Clear dismisses without erasing the OS clipboard.
 - [ ] Freeze prevents clipboard replacement; Resume updates from the actual current clipboard.
 - [ ] Hide masks current preview and subsequent copied content; Show reveals the current content.
 - [ ] Clear does not erase the OS clipboard and suppresses redisplay until different clipboard text appears.
@@ -26,7 +30,7 @@ This checklist is **not evidence of a pass**. Every checkbox starts unverified. 
 
 - [ ] Local Linux script exits zero. ELF header, SHA256 and Xvfb startup check agree with archive.
 - [ ] Extract archive with ordinary user permissions; binary launches without requiring dotnet SDK.
-- [ ] On an actual X11 desktop, reproduce the clipboard, tint, freeze, hide, clear, topmost, move and resize scenarios above.
+- [ ] On an actual X11 desktop, reproduce the clipboard, hidden startup, tray recovery, tint, freeze, hide, clear, topmost, move and all eight resize scenarios above.
 - [ ] Test on a modern Wayland session. Record whether the compositor supports transparency, positioning and clipboard monitoring. Do not claim support without actual evidence.
 - [ ] Exercise keyboard-only use, multiple monitors, display scaling, font fallback and accessible controls.
 - [ ] Record actual idle CPU/memory and responsiveness while switching apps on modest hardware.

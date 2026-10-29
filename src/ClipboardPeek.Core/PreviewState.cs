@@ -21,7 +21,7 @@ public sealed class PreviewState
         ? "Preview hidden. Select Show to reveal it."
         : CapturedText ?? "Copy text in another application to preview it here.";
 
-    public bool Observe(string? clipboardText)
+    public bool Observe(string? clipboardText, bool force = false)
     {
         if (IsFrozen || string.IsNullOrEmpty(clipboardText))
         {
@@ -33,7 +33,7 @@ public sealed class PreviewState
             : clipboardText;
 
         byte[] hash = SHA256.HashData(MemoryMarshal.AsBytes(boundedText.AsSpan()));
-        if (_lastObservedHash is not null &&
+        if (!force && _lastObservedHash is not null &&
             CryptographicOperations.FixedTimeEquals(hash, _lastObservedHash))
         {
             CryptographicOperations.ZeroMemory(hash);
