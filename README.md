@@ -49,7 +49,9 @@ dotnet publish src/ClipboardPeek/ClipboardPeek.csproj -c Release -r linux-x64 --
 
 Use `win-x64` to target Windows. Cross compilation is not native runtime verification.
 
-The [build and release workflow](.github/workflows/build-and-release.yml) executes core tests, application builds, package vulnerability checks, a Linux virtual display startup probe, packaging and SHA256 verification. A version tag triggers release creation **only after** both build jobs succeed. Automated checks do not replace Windows GUI acceptance or human visual, resource, accessibility and Linux compositor testing. See the [release gates](docs/RELEASE_GATES.md).
+**Local release gates:** On Windows, run `powershell -ExecutionPolicy Bypass -File scripts/release-local-windows.ps1` from a clean clone. On Linux, run `bash scripts/release-local-linux.sh`. Both gates require a .NET 10 SDK, clean Git checkout, dependency audit, adequate RAM and disk space, and create a verifiable archive under `artifacts/local/`. Linux additionally requires `xvfb-run` for a virtual display smoke check. Windows GUI and Linux compositor interaction still require manual acceptance. No tool or framework is silently installed. Bypass policies only if personally approved by the machine owner.
+
+The optional [build and release workflow](.github/workflows/build-and-release.yml) executes core tests, application builds, package vulnerability checks, a Linux virtual display startup probe, packaging and SHA256 verification. When GitHub Actions becomes available, a manually dispatched workflow on an authorized version tag can create a release **only after** both build jobs succeed. Hosted Actions is currently unavailable, so local native release gates are required. Automated checks do not replace Windows GUI acceptance or human visual, resource, accessibility and Linux compositor testing. See the [release gates](docs/RELEASE_GATES.md).
 
 ## Documentation
 
