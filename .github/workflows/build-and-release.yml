@@ -1,11 +1,8 @@
 name: Build, test and package
 
+# Hosted Actions are intentionally manual while hosted runner capacity is unavailable.
+# Local release gates are authoritative; do not rely on this workflow for approval.
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
