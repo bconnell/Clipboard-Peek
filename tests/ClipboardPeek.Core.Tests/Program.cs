@@ -59,6 +59,13 @@ gate.Reset();
 Require(!gate.IsPrimed, "reset discards baseline");
 Require(!gate.Observe("different", null), "post-reset first observation stays hidden");
 
+ClipboardChangeGate earlyStartup = new();
+earlyStartup.PrimeSequence(500);
+Require(!earlyStartup.Observe("existing content", 500), "startup content stays hidden if sampled asynchronously");
+Require(earlyStartup.Observe("copied immediately after launch", 501), "copy after immediate native baseline opens viewer");
+earlyStartup.Reset();
+Require(!earlyStartup.IsPrimed, "immediate startup baseline resets");
+
 PreviewState repeatedCopy = new();
 Require(repeatedCopy.Observe("same text"), "first preview copy captured");
 repeatedCopy.Clear();
