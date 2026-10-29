@@ -58,6 +58,14 @@ test -x "$publish/ClipboardPeek" || {
     echo 'RELEASE BLOCKED: executable absent or not marked executable' >&2
     exit 1
 }
+command -v od >/dev/null || { echo 'RELEASE BLOCKED: od is required to inspect ELF header' >&2; exit 1; }
+elf_magic="$(od -An -tx1 -N4 "$publish/ClipboardPeek" | tr -d ' \n')"
+elf_class="$(od -An -tu1 -j4 -N1 "$publish/ClipboardPeek" | tr -d ' \n')"
+elf_machine="$(od -An -tu2 -j18 -N2 "$publish/ClipboardPeek" | tr -d ' \n')"
+if [[ "$elf_magic" != 7f454c46 || "$elf_class" != 2 || "$elf_machine" != 62 ]]; then
+    echo 'RELEASE BLOCKED: package does not contain a Linux x86_64 ELF executable' >&2
+    exit 1
+fi
 set +e
 xvfb-run -a timeout 8s "$publish/ClipboardPeek" > "$run/gui-smoke.log" 2>&1
 smoke_exit=$?
