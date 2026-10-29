@@ -10,3 +10,4 @@ dist/
 TestResults/
 *.pdb
 .DS_Store
+.packages/
