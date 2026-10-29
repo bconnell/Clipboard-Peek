@@ -33,6 +33,12 @@ public sealed class OverlayWindow : Window
 
     public OverlayWindow()
     {
+        ulong? startupSequence = WindowsClipboardSequence.Read();
+        if (startupSequence.HasValue)
+        {
+            _changeGate.PrimeSequence(startupSequence.Value);
+        }
+
         Title = "Clipboard Peek";
         Width = 440;
         Height = 250;
