@@ -5,7 +5,7 @@ Never claim that source inspection, static analysis, compilation, automated test
 | Dimension | Release acceptance |
 | --- | --- |
 | Preservation | Audit repo and commit, no history rewrites, exact scope |
-| Function | Plain text copy, freeze, hide, clear, unpin, move, resize, tint, close |
+| Function | No initial popup, new post-launch copy opens, repeated Windows copy, freeze, hide, clear, tray exit/show, unpin, move, eight-way resize, tint and close |
 | Boundaries | Unicode, long text, rapid changes, empty clipboard, unavailable clipboard |
 | Privacy | No clipboard logs, disk history, remote transport, tracking or hidden persistence |
 | Stability | No unbounded process growth, blocked clipboard handling, normal exit and restart |
