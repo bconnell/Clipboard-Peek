@@ -88,12 +88,19 @@ try {
     if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Missing executable.' }
 
     $stream = [System.IO.File]::OpenRead($exe)
+    $reader = New-Object System.IO.BinaryReader($stream)
     try {
-        if ($stream.ReadByte() -ne 0x4D -or $stream.ReadByte() -ne 0x5A) {
-            throw 'Executable did not have a valid MZ header.'
+        if ($reader.ReadUInt16() -ne 0x5A4D) { throw 'Missing MZ header.' }
+        $stream.Position = 0x3C
+        $peOffset = $reader.ReadInt32()
+        if ($peOffset -lt 64 -or $peOffset -gt ($stream.Length - 6)) {
+            throw 'Invalid PE header offset.'
         }
+        $stream.Position = $peOffset
+        if ($reader.ReadUInt32() -ne 0x00004550) { throw 'Invalid PE signature.' }
+        if ($reader.ReadUInt16() -ne 0x8664) { throw 'Executable is not AMD64.' }
     }
-    finally { $stream.Dispose() }
+    finally { $reader.Dispose() }
 
     Copy-Item (Join-Path $root 'LICENSE') $publish
     Copy-Item (Join-Path $root 'THIRD_PARTY_NOTICES.md') $publish
