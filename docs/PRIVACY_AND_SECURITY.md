@@ -1,6 +1,6 @@
 # Privacy and security
 
-Clipboard Peek reads plain text from the operating system clipboard and displays one current preview locally. There are no clipboard history files, analytics, network APIs, marketing email, remote fonts, session replay, telemetry, remote monitoring, subscription features or uploaded content.
+Clipboard Peek reads plain text from the operating system clipboard and displays one current preview locally. It starts hidden and records only a bounded in-memory fingerprint of the starting clipboard text. The initial text is not previewed. On Windows it also reads a native clipboard sequence token. No clipboard data is sent or stored remotely. There are no clipboard history files, analytics, network APIs, marketing email, remote fonts, session replay, telemetry, remote monitoring, subscription features or uploaded content.
 
 | Data | Lifetime |
 | --- | --- |
