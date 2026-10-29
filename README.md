@@ -6,10 +6,10 @@ A small, see through clipboard viewer for desktop computers. Copy plain text, sw
 
 | Platform | Download | Run |
 | --- | --- | --- |
-| **Windows 10/11, 64 bit** | [Windows x64 release](https://github.com/bconnell/Clipboard-Peek/releases/latest) | Extract `ClipboardPeek-win-x64.zip`, then open `ClipboardPeek.exe`. |
-| **Linux desktop, 64 bit** | [Linux x64 release](https://github.com/bconnell/Clipboard-Peek/releases/latest) | Extract `ClipboardPeek-linux-x64.tar.gz`, then run `./ClipboardPeek`. |
+| **Windows 10/11, 64 bit** | **Not yet available** | Planned: extract `ClipboardPeek-win-x64.zip`, then run `ClipboardPeek.exe`. |
+| **Linux desktop, 64 bit** | **Not yet available** | Planned: extract `ClipboardPeek-linux-x64.tar.gz`, then run `./ClipboardPeek`. |
 
-**Release status:** Those downloads will be available **after** the first versioned GitHub Release passes its build gates. Source commits and CI artifacts are not the same as completed public executables. The packages are configured to include .NET and do not require an SDK or separate .NET installation.
+**No downloadable executables have been published.** The first release is blocked pending successful native compilation, dependency review, packaged runtime testing, and manual GUI acceptance. The release candidate is in [draft pull request #1](https://github.com/bconnell/Clipboard-Peek/pull/1). The planned archives are self contained and should not require users to install the .NET runtime. Once both files have actually been uploaded to a versioned GitHub Release and their checksums verified, this table must be updated to point directly to those specific assets.
 
 Unsigned Windows executables may receive a SmartScreen warning. Do not bypass an unfamiliar warning without checking the source and publisher. Linux needs compatible desktop graphics libraries and a compositor.
 
