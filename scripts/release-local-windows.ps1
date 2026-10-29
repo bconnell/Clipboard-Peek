@@ -26,7 +26,7 @@ function RunNative([string]$command, [string[]]$arguments) {
 }
 
 try {
-    if (-not $IsWindows -and $PSVersionTable.PSEdition -eq 'Core') {
+    if ($env:OS -ne 'Windows_NT') {
         throw 'The Windows native gate must execute on Windows.'
     }
 
