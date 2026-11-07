@@ -65,6 +65,10 @@ The optional [build and release workflow](.github/workflows/build-and-release.ym
 
 [Architecture](docs/ARCHITECTURE.md) · [Privacy and security](docs/PRIVACY_AND_SECURITY.md) · [Release gates](docs/RELEASE_GATES.md) · [Native acceptance checklist](docs/MANUAL_ACCEPTANCE.md) · [Third party notices](THIRD_PARTY_NOTICES.md)
 
+## Contributing and security
+
+Source improvements and well documented bug reports are welcome. See [Contributing](CONTRIBUTING.md) for the local validation expectations and [Security policy](SECURITY.md) for private disclosure guidance. **Never paste real clipboard contents or credentials into issues or screenshots.**
+
 ## License
 
 [MIT License](LICENSE). Copyright 2026 Brandon Connell.
