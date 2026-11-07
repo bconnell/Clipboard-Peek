@@ -13,6 +13,12 @@ A small, see through clipboard viewer for desktop computers. Copy plain text, sw
 
 Unsigned Windows executables may receive a SmartScreen warning. Do not bypass an unfamiliar warning without checking the source and publisher. Linux needs compatible desktop graphics libraries and a compositor.
 
+## Screenshot
+
+![Real Clipboard Peek floating Windows overlay showing a copied C# code excerpt, with the Unpin, Resume, Hide and Dismiss controls visible.](docs/screenshots/clipboard-peek-windows.png)
+
+*Actual in-app screenshot from an earlier Windows prototype, supplied by the project owner. Not a mockup. The latest source also includes hidden startup, tray controls, and eight-way resizing; those changes still require native runtime acceptance.*
+
 ## How it works
 
 1. Launch Clipboard Peek. It starts **hidden** with a tray icon, leaving the clipboard and your screen unchanged.
@@ -58,6 +64,10 @@ The optional [build and release workflow](.github/workflows/build-and-release.ym
 ## Documentation
 
 [Architecture](docs/ARCHITECTURE.md) · [Privacy and security](docs/PRIVACY_AND_SECURITY.md) · [Release gates](docs/RELEASE_GATES.md) · [Native acceptance checklist](docs/MANUAL_ACCEPTANCE.md) · [Third party notices](THIRD_PARTY_NOTICES.md)
+
+## Contributing and security
+
+Source improvements and well documented bug reports are welcome. See [Contributing](CONTRIBUTING.md) for the local validation expectations and [Security policy](SECURITY.md) for private disclosure guidance. **Never paste real clipboard contents or credentials into issues or screenshots.**
 
 ## License
 

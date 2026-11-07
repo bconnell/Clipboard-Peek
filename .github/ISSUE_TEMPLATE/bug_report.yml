@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a reproducible Clipboard Peek problem using synthetic data
+title: "Bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use only synthetic clipboard data. Do not attach passwords, customer records, credentials, private desktop screenshots, or sensitive logs. For vulnerabilities, follow SECURITY.md.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows 10 or 11 x64
+        - Linux X11 x64
+        - Linux Wayland x64
+        - Other or unknown
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen?
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Actual behavior
+      description: Describe the symptom without private data
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction using synthetic text
+      description: Include relevant version/commit, window manager, and steps where possible
+    validations:
+      required: true
