@@ -76,7 +76,7 @@ function Invoke-ProcessGate {
         $finished = $false
         while (-not $finished) {
             $finished = $process.WaitForExit(5000)
-            $totalLogBytes = 0L
+            $totalLogBytes = [long]0
             if (Test-Path -LiteralPath $stdout) { $totalLogBytes += (Get-Item -LiteralPath $stdout).Length }
             if (Test-Path -LiteralPath $stderr) { $totalLogBytes += (Get-Item -LiteralPath $stderr).Length }
             if ($totalLogBytes -gt ([long]33554432)) { throw "Log budget exceeded at $Stage (32 MiB)" }
@@ -144,8 +144,16 @@ try {
 
     $gitStatus = Invoke-ProcessGate 'git_status' $git @('status', '--porcelain=v1', '--untracked-files=all') $root $logs 30
     Assert-True ([string]::IsNullOrWhiteSpace((Get-OneLine $gitStatus.OutputPath))) 'Checkout has uncommitted or untracked files. No changes were discarded.'
-    $remote = Invoke-ProcessGate 'git_remote' $git @('config', '--get', 'remote.origin.url') $root $logs 30
-    $origin = Get-OneLine $remote.OutputPath
+    # Keep the origin URL only in process memory; it can contain embedded auth.
+    $priorPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $remoteLines = @(& $git config --get remote.origin.url 2>&1)
+        $remoteExit = $LASTEXITCODE
+    }
+    finally { $ErrorActionPreference = $priorPreference }
+    Assert-True ($remoteExit -eq 0 -and $remoteLines.Count -eq 1) 'Cannot safely verify the remote origin.'
+    $origin = ([string]$remoteLines[0]).Trim()
     Assert-True ($origin -match '(?i)(?:[/:])bconnell/Clipboard-Peek(?:\.git)?$') 'Git remote is not the expected Clipboard Peek repository.'
     $head = Invoke-ProcessGate 'git_head' $git @('rev-parse', 'HEAD') $root $logs 30
     $sha = Get-OneLine $head.OutputPath
@@ -171,7 +179,8 @@ try {
     Assert-True ($null -ne $auditData.projects) 'Dependency audit output was unrecognized.'
     foreach ($p in @($auditData.projects)) {
         foreach ($framework in @($p.frameworks)) {
-            foreach ($package in @($framework.topLevelPackages) + @($framework.transitivePackages)) {
+            $packageItems = @($framework.topLevelPackages) + @($framework.transitivePackages)
+            foreach ($package in $packageItems) {
                 if ($null -ne $package -and $null -ne $package.vulnerabilities -and @($package.vulnerabilities).Count -gt 0) {
                     throw "Vulnerable dependency found in $($p.path). Release blocked."
                 }
@@ -185,7 +194,7 @@ try {
     [void](Invoke-ProcessGate 'publish_native_windows' $dotnet @('publish', $project, '-c', 'Release', '-r', 'win-x64', '--self-contained', 'true', '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:DebugType=none', '-p:DebugSymbols=false', '-m:1', '-o', $native) $root $logs 900)
     $nativeExe = Join-Path $native 'ClipboardPeek.exe'
     Assert-True (Test-Path -LiteralPath $nativeExe -PathType Leaf) 'Native Windows executable was not produced.'
-    $reader = New-Object System.IO.BinaryReader([System.IO.File]::OpenRead($nativeExe))
+    $reader = [System.IO.BinaryReader]::new([System.IO.File]::OpenRead($nativeExe))
     try {
         Assert-True ($reader.ReadUInt16() -eq 0x5A4D) 'Invalid Windows MZ header.'
         $reader.BaseStream.Position = 0x3C
