@@ -1,0 +1,14 @@
+.git
+.vs
+.idea
+**/bin
+**/obj
+.packages
+artifacts
+dist
+TestResults
+*.log
+*.user
+*.suo
+*.pdb
+.DS_Store
